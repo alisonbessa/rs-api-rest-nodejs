@@ -27,12 +27,13 @@ export async function transactionsRoutes(app: FastifyInstance) {
       preHandler: [checkSessionIdExists],
     },
     async (request) => {
-      const getTransactionParamsSchema = z.object({
+      const getTransactionsParamsSchema = z.object({
         id: z.string().uuid(),
       })
 
+      const { id } = getTransactionsParamsSchema.parse(request.params)
+
       const { sessionId } = request.cookies
-      const { id } = getTransactionParamsSchema.parse(request.params)
 
       const transaction = await knex('transactions')
         .where({
@@ -41,7 +42,9 @@ export async function transactionsRoutes(app: FastifyInstance) {
         })
         .first()
 
-      return { transaction }
+      return {
+        transaction,
+      }
     },
   )
 
@@ -52,6 +55,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
     },
     async (request) => {
       const { sessionId } = request.cookies
+
       const summary = await knex('transactions')
         .where('session_id', sessionId)
         .sum('amount', { as: 'amount' })
@@ -77,7 +81,7 @@ export async function transactionsRoutes(app: FastifyInstance) {
     if (!sessionId) {
       sessionId = randomUUID()
 
-      reply.cookie('sessionId', sessionId, {
+      reply.setCookie('sessionId', sessionId, {
         path: '/',
         maxAge: 1000 * 60 * 60 * 24 * 7, // 7 days
       })
@@ -87,8 +91,9 @@ export async function transactionsRoutes(app: FastifyInstance) {
       id: randomUUID(),
       title,
       amount: type === 'credit' ? amount : amount * -1,
+      session_id: sessionId,
     })
 
-    return reply.status(201).send('Transaction Created Successfuly')
+    return reply.status(201).send()
   })
 }
